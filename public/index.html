@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<header>
+</header>
+  <body>
+    <button id="googleLogin" class="btn btn-action">Google LogIn</button>
+    <button id="btnLogout" class="btn btn-action">Log out</button></br>
+    <canvas id="myCanvas" width="800" height="600" style="border:1px solid #000000;"></canvas></br>
+  message: <input id="message" type="text" size="100" oninput="messageFun()"></br>
+  choose your color</br>
+  red:<input id="red" type="number" size="3" min="0" max="255">
+  green:<input id="green" type="number" size="3" min="0" max="255">
+  blue:<input id="blue" type="number" size="3" min="0" max="255">
+  <button onclick="submitColor()">choose color</button>
+  x:<input id="xpos" type="number" size="3" min="0" max="800">
+  y:<input id="ypos" type="number" size="3" min="0" max="600">
+
+  <button onclick="submitPosition()">choose position</button>
+  <div id="nearUsers">
+  </div>
+  </body>
+<script src="https://www.gstatic.com/firebasejs/4.10.0/firebase.js"></script>
+<script>
+var config = {
+  apiKey: "AIzaSyAYZcWIMWHL0QmT4CGByqgYocGs8yXXU2M",
+  authDomain: "mpfbgames.firebaseapp.com",
+  databaseURL: "https://mpfbgames.firebaseio.com",
+  projectId: "mpfbgames",
+  storageBucket: "",
+  messagingSenderId: "397498744807"
+};
+firebase.initializeApp(config);
+var positionsRef = firebase.database().ref("positions");
+var uid;
+const btnLogout = document.getElementById('btnLogout');
+
+firebase.auth().onAuthStateChanged(firebaseUser => {
+    if(firebaseUser){
+      uid = firebaseUser.uid;
+      console.log('you are logged in');
+    }
+  });
+
+
+document.getElementById('googleLogin').addEventListener('click', function(){
+    var provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).then(res=>{ console.log('login successful') }).catch(err=>{ console.warn(err) });
+  }, false);
+
+btnLogout.addEventListener('click', e=>{
+  firebase.auth().signOut();
+});
+
+function messageFun(){
+  positionsRef.child(uid+"/message").transaction(function(message) {
+        message = document.getElementById("message").value;
+        return message;
+  });
+}
+red = 255;
+green = 20;
+blue = 20;
+
+function submitColor(){
+  red = document.getElementById("red").value;
+  green = document.getElementById("green").value;
+  blue = document.getElementById("blue").value;
+  positionsRef.child(uid+"/rgb").set({
+      red,
+      green,
+      blue
+  });
+}
+
+function submitPosition(){
+  x = document.getElementById("xpos").value;
+  y = document.getElementById("ypos").value;
+  positionsRef.child(uid+"/xy").set({
+      xposition: x,
+      yposition: y
+  });
+}
+
+positionsRef.on("value", function(snapshot){
+  var c = document.getElementById("myCanvas");
+  var ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, 800, 600);
+  var userData = snapshot.val();
+  var keys = Object.keys(userData);
+    for (i = 0; i < keys.length; i++) {
+      var pk = keys[i];
+      ctx.fillStyle = 'rgb('+userData[pk].rgb.red +','+ userData[pk].rgb.green +','+ userData[pk].rgb.blue +')';
+      ctx.beginPath();
+      ctx.arc(userData[pk].xy.xposition,userData[pk].xy.yposition,10,0,2*Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = 'black';
+
+      ctx.font = "10px Arial";
+      ctx.fillText(userData[pk].message, parseInt(userData[pk].xy.xposition)+13, parseInt(userData[pk].xy.yposition)+7);
+    }
+
+    for (i = 0; i < keys.length; i++) {
+      var pk = keys[i];
+      if(userData[uid] != userData[pk]){
+        if(Math.abs(userData[uid].xy.xposition - userData[pk].xy.xposition) < 20 && Math.abs(userData[uid].xy.yposition - userData[pk].xy.yposition) < 20){
+          console.log("this guy is close",userData[pk].closemessage);
+        }
+
+      }
+
+    }
+
+});
+
+
+var vel = 10;
+// window.addEventListener("keydown", function (event) {
+//   if (event.defaultPrevented) {
+//     return; // Do nothing if the event was already processed
+//   }
+//
+//   switch (event.key) {
+//     case "ArrowDown":
+//       positionsRef.child(uid+"/yposition").transaction(function(yposition) {
+//         if (yposition) {
+//           yposition = yposition + vel;
+//         }
+//         return (yposition || 1);
+//       });
+//     break;
+//     case "ArrowUp":
+//       positionsRef.child(uid+"/yposition").transaction(function(yposition) {
+//         if (yposition) {
+//           yposition = yposition - vel;
+//         }
+//         return (yposition || -vel);
+//       });
+//     break;
+//     case "ArrowLeft":
+//       positionsRef.child(uid+"/xposition").transaction(function(xposition) {
+//         if (xposition) {
+//           xposition = xposition - vel;
+//         }
+//         return (xposition || 1);
+//       });
+//     break;
+//     case "ArrowRight":
+//       positionsRef.child(uid+"/xposition").transaction(function(xposition) {
+//         if (xposition) {
+//           xposition = xposition + vel;
+//         }
+//         return (xposition || 1);
+//       });
+//       break;
+//     case "Enter":
+//       document.getElementById("message").focus();
+//       break;
+//     case "Escape":
+//     document.getElementById("message").value = "";
+//       break;
+//     default:
+//       return; // Quit when this doesn't handle the key event.
+//   }
+//   // Cancel the default action to avoid it being handled twice
+//   event.preventDefault();
+// }, true);
+</script>
+</html>
